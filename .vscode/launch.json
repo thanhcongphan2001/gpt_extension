@@ -1,0 +1,49 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Chrome Extension",
+      "type": "chrome",
+      "request": "launch",
+      "url": "chrome://extensions/",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "userDataDir": "${workspaceFolder}/.chrome-debug-profile",
+      "runtimeArgs": [
+        "--load-extension=${workspaceFolder}/dist",
+        "--disable-extensions-except=${workspaceFolder}/dist",
+        "--disable-web-security",
+        "--disable-features=TranslateUI",
+        "--no-first-run"
+      ],
+      "preLaunchTask": "build-dev"
+    },
+    {
+      "name": "Debug Extension Popup",
+      "type": "chrome",
+      "request": "launch",
+      "url": "chrome-extension://${extensionId}/popup.html",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "userDataDir": "${workspaceFolder}/.chrome-debug-profile"
+    },
+    {
+      "name": "Debug Content Script",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "urlFilter": "*"
+    },
+    {
+      "name": "Debug Background Script",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "urlFilter": "chrome-extension://*"
+    }
+  ]
+}

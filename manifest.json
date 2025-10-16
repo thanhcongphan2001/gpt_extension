@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "GPT Chrome Integration",
+  "version": "1.0.0",
+  "description": "Integrate GPT directly into Chrome with debugging capabilities",
+  "permissions": ["activeTab", "storage", "debugger", "tabs"],
+  "host_permissions": [
+    "https://api.openai.com/*",
+    "http://localhost/*",
+    "https://localhost/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "GPT Assistant",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["injected.js", "debug-panel.html", "debug-panel.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "devtools_page": "devtools.html"
+}
