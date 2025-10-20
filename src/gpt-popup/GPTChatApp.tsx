@@ -461,23 +461,31 @@ Trả lời bằng tiếng Việt, chi tiết và cụ thể.`;
       // Get current page info with content if needed
       let pageContext = currentPage;
       if (needsPageContent && currentPage) {
-        console.log("🔍 Requesting page content...");
+        console.log(
+          "🔍 User wants page analysis, requesting page content (NOT console logs)..."
+        );
         try {
           const pageResponse = await chrome.runtime.sendMessage({
             type: "GET_CURRENT_PAGE",
-            data: { includeContent: true },
+            data: {
+              includeContent: true,
+              includeLogs: false, // Explicitly exclude logs for page analysis
+            },
           });
 
-          console.log("📥 Page response:", pageResponse);
+          console.log("📥 Page content response:", pageResponse);
 
           if (pageResponse.success && pageResponse.data.content) {
             pageContext = {
               ...currentPage,
-              pageText: `${pageResponse.data.content.metaDescription} ${pageResponse.data.content.headings} ${pageResponse.data.content.content}`,
+              pageText: `${pageResponse.data.content.metaDescription || ""} ${
+                pageResponse.data.content.headings || ""
+              } ${pageResponse.data.content.content || ""}`,
               metaDescription: pageResponse.data.content.metaDescription,
               headings: pageResponse.data.content.headings,
+              fullContent: pageResponse.data.content.content,
             };
-            console.log("✅ Page context created:", pageContext);
+            console.log("✅ Page context created for analysis:", pageContext);
           } else {
             console.warn("❌ No page content received:", pageResponse);
           }
@@ -548,25 +556,27 @@ Trả lời bằng tiếng Việt, chi tiết và cụ thể.`;
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <header className="bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 text-white shadow-xl">
-        <div className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-2">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                  <span className="text-xl">🤖</span>
+        <div className="p-3 sm:p-4 lg:p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center space-x-2 sm:space-x-3 mb-2">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+                  <span className="text-lg sm:text-xl">🤖</span>
                 </div>
-                <div>
-                  <h1 className="text-xl font-bold tracking-tight">
+                <div className="min-w-0">
+                  <h1 className="text-lg sm:text-xl font-bold tracking-tight truncate">
                     GPT Assistant
                   </h1>
-                  <p className="text-indigo-100 text-sm">Powered by OpenAI</p>
+                  <p className="text-indigo-100 text-xs sm:text-sm">
+                    Powered by OpenAI
+                  </p>
                 </div>
               </div>
               {currentPage && (
-                <div className="mt-3 bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                <div className="mt-2 sm:mt-3 bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3 border border-white/20">
                   <div className="flex items-center space-x-2 mb-1">
-                    <span className="text-xs">🌐</span>
-                    <div className="text-sm font-medium truncate text-white">
+                    <span className="text-xs flex-shrink-0">🌐</span>
+                    <div className="text-xs sm:text-sm font-medium truncate text-white">
                       {currentPage.title}
                     </div>
                   </div>
@@ -576,38 +586,38 @@ Trả lời bằng tiếng Việt, chi tiết và cụ thể.`;
                 </div>
               )}
             </div>
-            <div className="flex space-x-2 ml-4">
+            <div className="flex space-x-1 sm:space-x-2 flex-shrink-0">
               <button
-                className="p-3 hover:bg-white/20 rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/20 hover:scale-105"
+                className="p-2 sm:p-3 hover:bg-white/20 rounded-lg sm:rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/20 hover:scale-105"
                 onClick={clearChat}
                 title="Clear chat"
               >
-                <span className="text-lg">🗑️</span>
+                <span className="text-sm sm:text-lg">🗑️</span>
               </button>
               <button
-                className="p-3 hover:bg-white/20 rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/20 hover:scale-105"
+                className="p-2 sm:p-3 hover:bg-white/20 rounded-lg sm:rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/20 hover:scale-105"
                 onClick={() => window.close()}
                 title="Close window"
               >
-                <span className="text-lg">✕</span>
+                <span className="text-sm sm:text-lg">✕</span>
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
         {messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-6 max-w-md">
-              <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto shadow-lg">
-                <span className="text-3xl">🤖</span>
+            <div className="text-center space-y-4 sm:space-y-6 max-w-md mx-auto px-4">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto shadow-lg">
+                <span className="text-2xl sm:text-3xl">🤖</span>
               </div>
               <div className="space-y-3">
-                <h3 className="text-2xl font-bold text-gray-800">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-800">
                   Xin chào! 👋
                 </h3>
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                   Tôi là GPT Assistant, sẵn sàng giúp bạn phân tích trang web
                   hiện tại hoặc trả lời bất kỳ câu hỏi nào.
                 </p>
@@ -619,7 +629,7 @@ Trả lời bằng tiếng Việt, chi tiết và cụ thể.`;
                 </div>
                 <div className="bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-purple-100">
                   <span className="text-purple-600 font-medium">🔍 Ví dụ:</span>{" "}
-                  "Tóm tắt nội dung chính"
+                  "debug"
                 </div>
               </div>
             </div>
@@ -634,19 +644,19 @@ Trả lời bằng tiếng Việt, chi tiết và cụ thể.`;
             }`}
           >
             <div
-              className={`max-w-[80%] ${
+              className={`max-w-[85%] sm:max-w-[80%] ${
                 message.type === "user" ? "order-2" : "order-1"
               }`}
             >
-              <div className="flex items-start space-x-3">
+              <div className="flex items-start space-x-2 sm:space-x-3">
                 {message.type !== "user" && (
-                  <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <span className="text-sm">🤖</span>
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-xs sm:text-sm">🤖</span>
                   </div>
                 )}
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div
-                    className={`rounded-2xl px-4 py-3 shadow-sm ${
+                    className={`rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 shadow-sm ${
                       message.type === "user"
                         ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white ml-auto"
                         : message.type === "error"
@@ -654,12 +664,12 @@ Trả lời bằng tiếng Việt, chi tiết và cụ thể.`;
                         : "bg-white text-gray-800 border border-gray-200"
                     }`}
                   >
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                    <div className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed break-words">
                       {message.content}
                     </div>
                   </div>
                   <div
-                    className={`text-xs text-gray-500 mt-2 ${
+                    className={`text-xs text-gray-500 mt-1 sm:mt-2 ${
                       message.type === "user" ? "text-right" : "text-left"
                     }`}
                   >
@@ -667,8 +677,8 @@ Trả lời bằng tiếng Việt, chi tiết và cụ thể.`;
                   </div>
                 </div>
                 {message.type === "user" && (
-                  <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <span className="text-sm">👤</span>
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-xs sm:text-sm">👤</span>
                   </div>
                 )}
               </div>
@@ -678,25 +688,25 @@ Trả lời bằng tiếng Việt, chi tiết và cụ thể.`;
 
         {isLoading && (
           <div className="flex justify-start">
-            <div className="max-w-[80%]">
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <span className="text-sm">🤖</span>
+            <div className="max-w-[85%] sm:max-w-[80%]">
+              <div className="flex items-start space-x-2 sm:space-x-3">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                  <span className="text-xs sm:text-sm">🤖</span>
                 </div>
-                <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-200">
-                  <div className="flex items-center space-x-3">
+                <div className="bg-white rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 shadow-sm border border-gray-200">
+                  <div className="flex items-center space-x-2 sm:space-x-3">
                     <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div>
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-indigo-500 rounded-full animate-bounce"></div>
                       <div
-                        className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"
+                        className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-indigo-500 rounded-full animate-bounce"
                         style={{ animationDelay: "0.1s" }}
                       ></div>
                       <div
-                        className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"
+                        className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-indigo-500 rounded-full animate-bounce"
                         style={{ animationDelay: "0.2s" }}
                       ></div>
                     </div>
-                    <span className="text-gray-600 text-sm">
+                    <span className="text-gray-600 text-xs sm:text-sm">
                       GPT đang suy nghĩ...
                     </span>
                   </div>
@@ -709,26 +719,26 @@ Trả lời bằng tiếng Việt, chi tiết và cụ thể.`;
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-gray-200/50 bg-white/80 backdrop-blur-sm p-6">
+      <div className="border-t border-gray-200/50 bg-white/80 backdrop-blur-sm p-3 sm:p-4 lg:p-6">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-end space-x-4">
+          <div className="flex items-end space-x-2 sm:space-x-4">
             <div className="flex-1 relative">
               <textarea
                 ref={textareaRef}
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyPress}
-                placeholder="Nhập tin nhắn của bạn... (Enter để gửi, Shift+Enter để xuống dòng)"
-                className="w-full resize-none border-2 border-gray-200 rounded-2xl px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 max-h-32 bg-white/90 backdrop-blur-sm shadow-sm"
+                placeholder="Nhập tin nhắn... (Enter để gửi)"
+                className="w-full resize-none border-2 border-gray-200 rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 pr-8 sm:pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 max-h-24 sm:max-h-32 bg-white/90 backdrop-blur-sm shadow-sm text-sm sm:text-base"
                 disabled={isLoading}
                 rows={1}
               />
-              <div className="absolute right-3 bottom-3 text-xs text-gray-400">
+              <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3 text-xs text-gray-400">
                 {inputValue.length}/1000
               </div>
             </div>
             <button
-              className={`p-3 rounded-2xl font-medium transition-all duration-200 shadow-sm ${
+              className={`p-2 sm:p-3 rounded-xl sm:rounded-2xl font-medium transition-all duration-200 shadow-sm flex-shrink-0 ${
                 !inputValue.trim() || isLoading
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                   : "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white hover:shadow-lg hover:scale-105 active:scale-95"
@@ -736,16 +746,22 @@ Trả lời bằng tiếng Việt, chi tiết và cụ thể.`;
               onClick={sendMessage}
               disabled={!inputValue.trim() || isLoading}
             >
-              <span className="text-xl">{isLoading ? "⏳" : "🚀"}</span>
+              <span className="text-lg sm:text-xl">
+                {isLoading ? "⏳" : "🚀"}
+              </span>
             </button>
           </div>
-          <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
-            <div className="flex items-center space-x-4">
-              <span>💡 Tip: Shift+Enter để xuống dòng</span>
+          <div className="flex items-center justify-between mt-2 sm:mt-3 text-xs text-gray-500">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <span className="hidden sm:inline">
+                💡 Tip: Shift+Enter để xuống dòng
+              </span>
+              <span className="sm:hidden">💡 Shift+Enter xuống dòng</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span>GPT Assistant Online</span>
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="hidden sm:inline">GPT Assistant Online</span>
+              <span className="sm:hidden">Online</span>
             </div>
           </div>
         </div>
