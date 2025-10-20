@@ -3,7 +3,7 @@
   "name": "GPT Chrome Integration",
   "version": "1.0.0",
   "description": "Integrate GPT directly into Chrome with debugging capabilities",
-  "permissions": ["activeTab", "storage", "debugger", "tabs"],
+  "permissions": ["activeTab", "storage", "debugger", "tabs", "scripting"],
   "host_permissions": [
     "https://api.openai.com/*",
     "http://localhost/*",
@@ -31,12 +31,5 @@
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  },
-  "web_accessible_resources": [
-    {
-      "resources": ["injected.js", "debug-panel.html", "debug-panel.js"],
-      "matches": ["<all_urls>"]
-    }
-  ],
-  "devtools_page": "devtools.html"
+  }
 }

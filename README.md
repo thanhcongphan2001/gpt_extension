@@ -1,297 +1,194 @@
 # GPT Chrome Extension
 
-🤖 Integrate GPT directly into Chrome with advanced debugging capabilities for seamless AI-powered browsing.
+Chrome extension tích hợp GPT với khả năng phân tích trang web và Lighthouse audit.
 
-## Features
+## ✨ Tính năng
 
-- **🤖 GPT Chat Integration**: Chat with GPT directly on any webpage with floating button
-- **⚡ Lighthouse Performance Audit**: Built-in performance testing with beautiful reports
-- **🔧 Advanced Debugging**: Real-time debug panel with logs, network monitoring, and export
-- **⌨️ Keyboard Shortcuts**: Quick access with Ctrl+Shift+G/D/L shortcuts
-- **🎯 Context-Aware**: Analyzes current page content for relevant responses
-- **🛡️ Secure Storage**: API keys stored securely in Chrome's encrypted storage
-- **🎛️ Local Testing Mode**: Test all features without API key required
-- **📱 Responsive UI**: Clean, modern interface that works on all screen sizes
+- **🤖 GPT Chat**: Trò chuyện với GPT trong popup window riêng biệt
+- **📊 Lighthouse Audit**: Kiểm tra hiệu suất trang web với Core Web Vitals
+- **🔍 Phân tích trang web**: GPT tự động lấy nội dung trang web để phân tích
+- **🛠️ Debug Tools**: Công cụ debug chi tiết với console logs
+- **🎨 Modern UI**: Giao diện đẹp với React, TypeScript, và Tailwind CSS
+- **🔐 Secure Storage**: API key được lưu an toàn trong Chrome storage
 
-## Quick Start
+## 🚀 Cài đặt
 
-### Installation
-
-1. **Clone the repository**
+1. **Clone repository:**
 
    ```bash
-   git clone https://github.com/your-username/gpt-chrome-extension.git
+   git clone <repository-url>
    cd gpt-chrome-extension
    ```
 
-2. **Install dependencies**
+2. **Cài đặt dependencies:**
 
    ```bash
    npm install
    ```
 
-3. **Build the extension**
+3. **Build extension:**
 
    ```bash
    npm run build
    ```
 
-4. **Load in Chrome**
-   - Open Chrome and go to `chrome://extensions/`
-   - Enable "Developer mode" (top right toggle)
-   - Click "Load unpacked" and select the `dist` folder
+4. **Load vào Chrome:**
 
-### Configuration
+   - Mở `chrome://extensions/`
+   - Bật "Developer mode"
+   - Click "Load unpacked" → Chọn thư mục `dist`
 
-1. **Get OpenAI API Key**
+5. **Cấu hình API Key:**
+   - Click extension icon → Nhập OpenAI API key
+   - API key được lưu an toàn trong Chrome storage
 
-   - Visit [OpenAI API Keys](https://platform.openai.com/api-keys)
-   - Create a new API key
-   - Copy the key (starts with `sk-`)
+## 📖 Cách sử dụng
 
-2. **Configure Extension**
-   - Click the extension icon in Chrome toolbar
-   - Paste your API key in the configuration section
-   - Click "Save"
+### 🤖 GPT Chat
 
-## Usage
+1. **Mở GPT Chat:**
 
-### Basic Usage
+   ```
+   Click extension icon → "Open GPT Chat"
+   ```
 
-#### **🤖 GPT Chat:**
+2. **Sử dụng commands:**
 
-- **Floating Button**: Click the 🤖 button (blue-purple) on any webpage
-- **Keyboard Shortcut**: Press `Ctrl+Shift+G` to toggle chat panel
-- **Extension Popup**: Click extension icon → "Toggle Chat Panel"
-- **Context Menu**: Right-click selected text → "Analyze with GPT"
+   ```
+   phân tích    → Phân tích trang web hiện tại
+   debug        → Hiển thị thông tin debug extension
+   ```
 
-#### **⚡ Lighthouse Audit:**
+3. **Phân tích trang web:**
+   - Gõ "phân tích" hoặc "phân tích trang web này"
+   - GPT sẽ tự động lấy nội dung trang web (title, headings, paragraphs)
+   - Phân tích và đưa ra nhận xét chi tiết
 
-- **Floating Button**: Click the ⚡ button (red-orange) next to GPT button
-- **Keyboard Shortcut**: Press `Ctrl+Shift+L` to run performance audit
-- **Extension Popup**: Click extension icon → "Run Lighthouse Audit"
-- **Results**: View performance scores and detailed metrics
+### 📊 Lighthouse Audit
 
-#### **🐛 Debug Panel:**
+1. **Chạy audit:**
 
-- **Keyboard Shortcut**: Press `Ctrl+Shift+D` to open debug panel
-- **Extension Popup**: Click extension icon → "Toggle Debug Panel"
-- **Features**: Real-time logs, network monitoring, performance metrics
+   ```
+   Click extension icon → "Run Lighthouse Audit"
+   ```
 
-### Chat Panel
+2. **Xem kết quả:**
+   - Performance Score
+   - Core Web Vitals (LCP, FID, CLS)
+   - SEO và Accessibility metrics
+   - Popup window hiển thị kết quả chi tiết
 
-- **Ask Questions**: Type any question about the current page or general topics
-- **Page Analysis**: The extension automatically provides page context to GPT
-- **Conversation History**: Maintains conversation context within each tab
-- **Quick Actions**: Pre-built prompts for common tasks
+### 🔍 Debug Tools
 
-### Debug Features
+1. **Debug command:**
 
-- **Debug Panel**: Press `Ctrl+Shift+D` to open the debug panel
-- **Chrome DevTools**: Integrated panel in Chrome DevTools
-- **Network Monitoring**: Track all GPT API requests
-- **Performance Metrics**: Monitor memory usage and response times
-- **Log Export**: Export debug logs for troubleshooting
+   ```
+   Gõ "debug" trong GPT Chat
+   → Hiển thị Extension ID, Current Page, Page Response
+   ```
 
-## Development
+## 🛠️ Development
 
 ### Prerequisites
 
-- Node.js 16+ and npm
+- Node.js 16+ và npm
 - Chrome browser
 - OpenAI API key
 
 ### Development Setup
 
-1. **Install dependencies**
+```bash
+# Cài đặt dependencies
+npm install
 
-   ```bash
-   npm install
-   ```
+# Build extension
+npm run build
 
-2. **Start development mode**
+# Development mode (watch changes)
+npm run dev
 
-   ```bash
-   npm run dev
-   ```
-
-3. **Load extension in Chrome**
-
-   - Go to `chrome://extensions/`
-   - Enable Developer mode
-   - Load unpacked from `dist` folder
-
-4. **Enable hot reload** (optional)
-   ```bash
-   npm run watch
-   ```
+# Type checking
+npm run type-check
+```
 
 ### Available Scripts
 
-- `npm run dev` - Build and watch for changes
-- `npm run build` - Production build
-- `npm run build:dev` - Development build
-- `npm run watch` - Watch mode with hot reload
-- `npm run lint` - Run ESLint
-- `npm run test` - Run tests
-- `npm run clean` - Clean dist folder
-- `npm run zip` - Create distribution package
-- `npm run reload` - Reload extension in Chrome
+| Command              | Chức năng           |
+| -------------------- | ------------------- |
+| `npm run build`      | Build production    |
+| `npm run dev`        | Development mode    |
+| `npm run type-check` | TypeScript checking |
 
-### Project Structure
+## 📁 Cấu trúc project
 
 ```
-gpt-chrome-extension/
-├── manifest.json          # Extension manifest
-├── background.js          # Service worker
-├── content.js            # Content script
-├── popup.html/js/css     # Extension popup
-├── debug-panel.html/js   # Debug interface
-├── devtools.html/js      # DevTools integration
-├── services/
-│   └── gpt-service.js    # GPT API integration
-├── utils/
-│   └── debug-logger.js   # Logging utilities
-├── scripts/
-│   └── reload-extension.js # Development tools
-└── .vscode/              # VS Code configuration
+src/
+├── background/          # Background script
+├── popup/              # Main extension popup
+├── gpt-popup/          # GPT chat window
+├── services/           # GPT & Lighthouse services
+├── styles/             # Global styles
+└── types/              # TypeScript types
+
+dist/                   # Built extension files
+manifest.json           # Extension manifest
 ```
 
-### Debugging
+## 🏗️ Tech Stack
 
-#### Chrome DevTools Integration
+- **⚛️ React 18** - UI framework
+- **📘 TypeScript** - Type safety
+- **⚡ Vite** - Build tool siêu nhanh
+- **🎨 Tailwind CSS** - Utility-first CSS
+- **🔧 Chrome Extension Manifest V3** - Extension platform
 
-1. **Open DevTools** on any webpage
-2. **Navigate to GPT Assistant tab**
-3. **Monitor**:
-   - API requests and responses
-   - Console logs and errors
-   - Performance metrics
-   - Storage usage
+## 🎯 Commands
 
-#### Debug Panel
+| Command     | Chức năng                    |
+| ----------- | ---------------------------- |
+| `phân tích` | Phân tích trang web hiện tại |
+| `debug`     | Hiển thị thông tin debug     |
 
-- **Access**: Press `Ctrl+Shift+D` or use popup button
-- **Features**:
-  - Real-time log viewing
-  - Network request monitoring
-  - Performance tracking
-  - Storage inspection
+## 🔑 API Key
 
-#### VS Code Debugging
+Extension cần OpenAI API key để hoạt động:
 
-1. **Install recommended extensions**
-2. **Use provided launch configurations**:
-   - "Debug Chrome Extension" - Full extension debugging
-   - "Debug Content Script" - Content script specific
-   - "Debug Background Script" - Service worker debugging
+- Key được lưu local trong Chrome storage
+- Chỉ gửi đến OpenAI API, không gửi server khác
+- Có thể thay đổi key bất kỳ lúc nào
 
-### API Integration
+## 🚨 Troubleshooting
 
-#### GPT Service
+### Vấn đề thường gặp
 
-The `GPTService` class handles all OpenAI API interactions:
+1. **Extension không load:**
 
-```javascript
-// Example usage
-const gptService = new GPTService();
-await gptService.setApiKey("your-api-key");
-
-const response = await gptService.sendRequest({
-  message: "Analyze this webpage",
-  context: {
-    url: window.location.href,
-    title: document.title,
-    selectedText: "selected text",
-  },
-});
-```
-
-#### Configuration Options
-
-- **Model**: Default `gpt-3.5-turbo`, configurable
-- **Max Tokens**: Default 1000, adjustable
-- **Temperature**: Default 0.7, customizable
-- **Context Window**: Automatic conversation history management
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Extension not loading**
-
-   - Check Chrome Developer mode is enabled
+   - Kiểm tra Developer mode đã bật
    - Verify manifest.json syntax
-   - Check console for errors
+   - Check console errors
 
-2. **API key not working**
+2. **API key không hoạt động:**
 
-   - Verify key format (starts with `sk-`)
-   - Check OpenAI account has credits
-   - Test with API test button
+   - Verify key format (bắt đầu với `sk-`)
+   - Check OpenAI account có credits
+   - Test với debug command
 
-3. **Content script not injecting**
+3. **GPT không nhận page content:**
+   - Gõ "debug" để kiểm tra
+   - Xem Background Console logs
+   - Kiểm tra tab permissions
 
-   - Check site permissions
-   - Verify content script matches in manifest
-   - Check for CSP restrictions
+## 📝 License
 
-4. **Debug panel not opening**
-   - Ensure debug mode is enabled
-   - Check keyboard shortcuts
-   - Verify iframe permissions
+MIT License
 
-### Debug Information
+## 🤝 Contributing
 
-Enable debug mode in extension popup to see:
-
-- Extension version and status
-- Active tab information
-- API connection status
-- Recent error logs
-
-### Performance Issues
-
-- **High memory usage**: Clear conversation history
-- **Slow responses**: Check network connection and API status
-- **UI lag**: Disable debug mode in production
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-### Code Style
-
-- Use ESLint configuration provided
-- Follow existing code patterns
-- Add JSDoc comments for functions
-- Use meaningful variable names
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/your-username/gpt-chrome-extension/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/gpt-chrome-extension/discussions)
-- **Email**: your-email@example.com
-
-## Changelog
-
-### v1.0.0
-
-- Initial release
-- GPT integration with OpenAI API
-- Chrome DevTools integration
-- Debug panel and logging
-- Hot reload development environment
-- Context-aware conversations
+1. Fork repository
+2. Tạo feature branch
+3. Commit changes
+4. Submit pull request
 
 ---
 
-Made with ❤️ for productivity and AI-powered browsing.
+**Made with ❤️ for AI-powered browsing**
