@@ -57,6 +57,16 @@ if (existsSync("dist/src/gpt-popup/index.html")) {
   console.log("✅ Moved gpt-popup.html to root");
 }
 
+// Copy API files
+if (!existsSync("dist/api")) {
+  mkdirSync("dist/api", { recursive: true });
+}
+
+if (existsSync("src/api/console-logs.html")) {
+  copyFileSync("src/api/console-logs.html", "dist/api/console-logs.html");
+  console.log("✅ Copied src/api/console-logs.html");
+}
+
 console.log("🎉 Build completed successfully!");
 console.log("📂 Extension files are in the dist/ directory");
 console.log("🔧 Load the extension from chrome://extensions/ (Developer mode)");

@@ -72,6 +72,113 @@ class BackgroundService {
           sendResponse({ success: true });
           break;
 
+        case "SETUP_CONSOLE_LOGGING":
+          try {
+            // Get all tabs from all windows to find web pages
+            const tabs = await chrome.tabs.query({});
+            const webTabs = tabs.filter(
+              (tab) =>
+                !tab.url.startsWith("chrome-extension://") &&
+                !tab.url.startsWith("chrome://") &&
+                !tab.url.startsWith("moz-extension://")
+            );
+
+            // Get the most recently active web tab
+            let tab = webTabs.find((t) => t.active);
+            if (!tab && webTabs.length > 0) {
+              webTabs.sort(
+                (a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0)
+              );
+              tab = webTabs[0];
+            }
+
+            if (!tab) {
+              sendResponse({
+                success: false,
+                error: "No web page found to setup console logging",
+              });
+              return;
+            }
+
+            // Setup console logging on the page
+            await this.setupConsoleLogging(tab.id);
+
+            sendResponse({
+              success: true,
+              data: { message: "Console logging setup completed" },
+            });
+          } catch (error) {
+            console.error("Failed to setup console logging:", error);
+            sendResponse({
+              success: false,
+              error: error.message,
+            });
+          }
+          break;
+
+        case "API_GET_CONSOLE_LOGS":
+          try {
+            // Get all tabs from all windows to find web pages
+            const tabs = await chrome.tabs.query({});
+            const webTabs = tabs.filter(
+              (tab) =>
+                !tab.url.startsWith("chrome-extension://") &&
+                !tab.url.startsWith("chrome://") &&
+                !tab.url.startsWith("moz-extension://")
+            );
+
+            // Get the most recently active web tab
+            let tab = webTabs.find((t) => t.active);
+            if (!tab && webTabs.length > 0) {
+              webTabs.sort(
+                (a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0)
+              );
+              tab = webTabs[0];
+            }
+
+            if (!tab) {
+              sendResponse({
+                success: false,
+                error: "No web page found",
+                data: { logs: [], tabInfo: null },
+              });
+              return;
+            }
+
+            // Get console logs for this tab
+            const consoleLogs = await this.getConsoleLogsFromTab(tab.id);
+
+            // Get detailed page analysis
+            const pageAnalysis = await this.getDetailedPageAnalysis(tab.id);
+
+            sendResponse({
+              success: true,
+              data: {
+                tabInfo: {
+                  id: tab.id,
+                  title: tab.title,
+                  url: tab.url,
+                  active: tab.active,
+                },
+                logs: consoleLogs.logs || [],
+                note: consoleLogs.note,
+                error: consoleLogs.error,
+                timestamp: new Date().toISOString(),
+                totalLogs: (consoleLogs.logs || []).length,
+                pageAnalysis: pageAnalysis.analysis || null,
+                analysisError: pageAnalysis.error || null,
+              },
+            });
+          } catch (error) {
+            console.error("Failed to get console logs via API:", error);
+            sendResponse({
+              success: false,
+              error: error.message,
+              data: { logs: [] },
+            });
+          }
+          break;
+
         case "GET_CURRENT_PAGE":
           try {
             // Get all tabs from all windows to find web pages
@@ -110,6 +217,17 @@ class BackgroundService {
               "🎯 Selected tab:",
               tab ? { id: tab.id, url: tab.url, title: tab.title } : null
             );
+
+            // Get console logs if requested
+            let consoleLogs = null;
+            if (message.data && message.data.includeLogs && tab) {
+              try {
+                consoleLogs = await this.getConsoleLogsFromTab(tab.id);
+              } catch (logError) {
+                console.warn("Could not get console logs:", logError);
+                consoleLogs = { error: logError.message };
+              }
+            }
 
             if (tab) {
               // Try to get page content if requested
@@ -167,6 +285,7 @@ class BackgroundService {
                   title: tab.title,
                   url: tab.url,
                   content: pageContent,
+                  logs: consoleLogs,
                 },
               });
             } else {
@@ -284,11 +403,340 @@ class BackgroundService {
 
   setupDebugger() {
     // Enable debugging for development
-    if (process.env.NODE_ENV === "development") {
+    if (
+      typeof process !== "undefined" &&
+      process.env &&
+      process.env.NODE_ENV === "development"
+    ) {
       chrome.debugger.onEvent.addListener((source, method, params) => {
         this.debugLogger.log("Debugger event:", { source, method, params });
       });
     }
+  }
+
+  async setupConsoleLogging(tabId) {
+    console.log("🔧 Setting up console logging for tab:", tabId);
+
+    return new Promise((resolve) => {
+      try {
+        // Use Chrome Debugger API to capture ALL console messages
+        chrome.debugger.attach({ tabId }, "1.0", () => {
+          if (chrome.runtime.lastError) {
+            console.warn(
+              "Could not attach debugger:",
+              chrome.runtime.lastError
+            );
+            resolve({ error: chrome.runtime.lastError.message });
+            return;
+          }
+
+          // Enable Runtime domain to capture console messages
+          chrome.debugger.sendCommand({ tabId }, "Runtime.enable", {}, () => {
+            if (chrome.runtime.lastError) {
+              chrome.debugger.detach({ tabId });
+              resolve({ error: chrome.runtime.lastError.message });
+              return;
+            }
+
+            // Store console messages in a global array for this tab
+            if (!this.tabConsoleLogs) {
+              this.tabConsoleLogs = {};
+            }
+            this.tabConsoleLogs[tabId] = this.tabConsoleLogs[tabId] || [];
+
+            // Listen for console API calls
+            const onEvent = (source, method, params) => {
+              if (
+                source.tabId === tabId &&
+                method === "Runtime.consoleAPICalled"
+              ) {
+                const logEntry = {
+                  type: params.type,
+                  timestamp: new Date(params.timestamp).toLocaleTimeString(),
+                  message: params.args
+                    .map((arg) => {
+                      if (arg.value !== undefined) return String(arg.value);
+                      if (arg.description) return arg.description;
+                      if (arg.preview && arg.preview.description)
+                        return arg.preview.description;
+                      return String(arg);
+                    })
+                    .join(" "),
+                  source: "console",
+                };
+
+                this.tabConsoleLogs[tabId].push(logEntry);
+
+                // Keep only last 50 logs per tab
+                if (this.tabConsoleLogs[tabId].length > 50) {
+                  this.tabConsoleLogs[tabId] =
+                    this.tabConsoleLogs[tabId].slice(-50);
+                }
+              }
+
+              // Also capture Runtime exceptions (JavaScript errors)
+              if (
+                source.tabId === tabId &&
+                method === "Runtime.exceptionThrown"
+              ) {
+                const errorEntry = {
+                  type: "error",
+                  timestamp: new Date(params.timestamp).toLocaleTimeString(),
+                  message: `JS Exception: ${params.exceptionDetails.text} at ${params.exceptionDetails.url}:${params.exceptionDetails.lineNumber}`,
+                  source: "exception",
+                };
+
+                this.tabConsoleLogs[tabId].push(errorEntry);
+              }
+            };
+
+            chrome.debugger.onEvent.addListener(onEvent);
+
+            // Store the event listener reference for cleanup
+            if (!this.debuggerListeners) {
+              this.debuggerListeners = {};
+            }
+            this.debuggerListeners[tabId] = onEvent;
+
+            console.log("✅ Console logging setup completed for tab:", tabId);
+            resolve({ success: true });
+          });
+        });
+      } catch (error) {
+        console.error("❌ Error setting up console logging:", error);
+        resolve({ error: error.message });
+      }
+    });
+  }
+
+  async getConsoleLogsFromTab(tabId) {
+    console.log("🔍 Getting console logs for tab:", tabId);
+
+    // Return logs captured by Chrome Debugger API
+    if (this.tabConsoleLogs && this.tabConsoleLogs[tabId]) {
+      const logs = this.tabConsoleLogs[tabId];
+      console.log(`✅ Retrieved ${logs.length} console logs from debugger API`);
+
+      return {
+        logs: logs,
+        note: `Retrieved ${logs.length} console messages from Chrome Debugger API`,
+      };
+    } else {
+      console.warn("⚠️ No console logs found for tab:", tabId);
+
+      return {
+        logs: [],
+        note: "No console logs captured yet. Console logging may not be setup for this tab.",
+        error: "Console logging not initialized for this tab",
+      };
+    }
+  }
+
+  async getDetailedPageAnalysis(tabId) {
+    console.log("🔍 Getting detailed page analysis for tab:", tabId);
+
+    return new Promise((resolve) => {
+      try {
+        chrome.scripting.executeScript(
+          {
+            target: { tabId },
+            function: () => {
+              const analysis = {
+                brokenImages: [],
+                jsErrors: [],
+                networkIssues: [],
+                cssErrors: [],
+                missingResources: [],
+                performanceIssues: [],
+                accessibilityIssues: [],
+                pageInfo: {},
+              };
+
+              // 1. Detailed broken images analysis
+              const images = document.querySelectorAll("img");
+              images.forEach((img, index) => {
+                if (
+                  img.naturalWidth === 0 &&
+                  img.naturalHeight === 0 &&
+                  img.src
+                ) {
+                  analysis.brokenImages.push({
+                    index: index + 1,
+                    src: img.src,
+                    alt: img.alt || "No alt text",
+                    className: img.className || "No class",
+                    id: img.id || "No ID",
+                    parentElement: img.parentElement
+                      ? img.parentElement.tagName
+                      : "Unknown",
+                  });
+                }
+              });
+
+              // 2. Check for broken CSS/stylesheets
+              const stylesheets = document.querySelectorAll(
+                'link[rel="stylesheet"]'
+              );
+              stylesheets.forEach((link, index) => {
+                if (link.href && !link.sheet) {
+                  analysis.cssErrors.push({
+                    index: index + 1,
+                    href: link.href,
+                    type: "stylesheet",
+                    error: "Failed to load stylesheet",
+                  });
+                }
+              });
+
+              // 3. Check for broken scripts
+              const scripts = document.querySelectorAll("script[src]");
+              scripts.forEach((script, index) => {
+                if (script.src && !script.src.startsWith("data:")) {
+                  // Check if script has error attribute or failed to load
+                  if (
+                    script.hasAttribute("data-error") ||
+                    !script.readyState ||
+                    script.readyState === "error"
+                  ) {
+                    analysis.networkIssues.push({
+                      type: "script",
+                      src: script.src,
+                      index: index + 1,
+                      error: "Script failed to load or execute",
+                    });
+                  }
+                }
+              });
+
+              // 4. Check for missing resources (404s, etc.)
+              const allLinks = document.querySelectorAll("a[href]");
+              let brokenLinks = 0;
+              allLinks.forEach((link) => {
+                if (
+                  link.href &&
+                  (link.href.includes("404") || link.href.includes("error"))
+                ) {
+                  brokenLinks++;
+                }
+              });
+
+              if (brokenLinks > 0) {
+                analysis.missingResources.push({
+                  type: "broken_links",
+                  count: brokenLinks,
+                  description: `Found ${brokenLinks} potentially broken links`,
+                });
+              }
+
+              // 5. Performance issues
+              try {
+                const performanceEntries = performance.getEntries();
+                const slowResources = performanceEntries.filter(
+                  (entry) =>
+                    entry.duration > 3000 && entry.name.includes("http")
+                );
+
+                slowResources.forEach((entry, index) => {
+                  analysis.performanceIssues.push({
+                    index: index + 1,
+                    resource: entry.name,
+                    duration: Math.round(entry.duration),
+                    type: "slow_resource",
+                    description: `Resource took ${Math.round(
+                      entry.duration
+                    )}ms to load`,
+                  });
+                });
+              } catch (e) {
+                analysis.performanceIssues.push({
+                  type: "performance_check_error",
+                  error: e.message,
+                });
+              }
+
+              // 6. Accessibility issues
+              const imagesWithoutAlt =
+                document.querySelectorAll("img:not([alt])");
+              if (imagesWithoutAlt.length > 0) {
+                analysis.accessibilityIssues.push({
+                  type: "missing_alt_text",
+                  count: imagesWithoutAlt.length,
+                  description: `${imagesWithoutAlt.length} images missing alt text`,
+                });
+              }
+
+              const linksWithoutText = document.querySelectorAll(
+                "a:empty, a:not([aria-label]):not([title])"
+              );
+              if (linksWithoutText.length > 0) {
+                analysis.accessibilityIssues.push({
+                  type: "empty_links",
+                  count: linksWithoutText.length,
+                  description: `${linksWithoutText.length} links without text or labels`,
+                });
+              }
+
+              // 7. JavaScript errors from window.onerror
+              if (window.__jsErrors && window.__jsErrors.length > 0) {
+                analysis.jsErrors = window.__jsErrors.map((error, index) => ({
+                  index: index + 1,
+                  message: error.message,
+                  timestamp: error.timestamp,
+                  type: error.type,
+                }));
+              }
+
+              // 8. Page info
+              analysis.pageInfo = {
+                title: document.title,
+                url: window.location.href,
+                totalImages: images.length,
+                totalScripts: document.querySelectorAll("script").length,
+                totalLinks: document.querySelectorAll("a").length,
+                totalStylesheets: stylesheets.length,
+                doctype: document.doctype
+                  ? document.doctype.name
+                  : "No doctype",
+                charset: document.characterSet || "Unknown",
+                lang: document.documentElement.lang || "Not specified",
+              };
+
+              return analysis;
+            },
+          },
+          (results) => {
+            if (chrome.runtime.lastError) {
+              console.warn(
+                "Could not get detailed page analysis:",
+                chrome.runtime.lastError
+              );
+              resolve({
+                error: chrome.runtime.lastError.message,
+                analysis: null,
+              });
+            } else if (results && results[0] && results[0].result) {
+              const analysis = results[0].result;
+              console.log("✅ Retrieved detailed page analysis:", analysis);
+              resolve({
+                success: true,
+                analysis: analysis,
+              });
+            } else {
+              resolve({
+                error: "No analysis data returned",
+                analysis: null,
+              });
+            }
+          }
+        );
+      } catch (error) {
+        console.error("❌ Error getting detailed page analysis:", error);
+        resolve({
+          error: error.message,
+          analysis: null,
+        });
+      }
+    });
   }
 
   async getStoredApiKey() {

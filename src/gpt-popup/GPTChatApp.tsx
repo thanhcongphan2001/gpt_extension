@@ -126,48 +126,303 @@ const GPTChatApp: React.FC = () => {
     }
   };
 
-  const handleDebugCommand = async () => {
+  const getDebugInfo = async () => {
+    console.log("🔍 Getting debug info...");
+
     try {
-      // Get current page info
-      const pageResponse = await chrome.runtime.sendMessage({
-        type: "GET_CURRENT_PAGE",
+      // Step 1: First setup console logging on the page
+      console.log("📝 Setting up console logging...");
+      await chrome.runtime.sendMessage({
+        type: "SETUP_CONSOLE_LOGGING",
         target: "background",
       });
 
-      const debugInfo = {
+      // Step 2: Wait a bit for logs to be captured
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Step 3: Get current page info with console logs
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(
+          () => reject(new Error("Request timeout after 8 seconds")),
+          8000
+        );
+      });
+
+      let pageResponse = null;
+      try {
+        pageResponse = await Promise.race([
+          chrome.runtime.sendMessage({
+            type: "GET_CURRENT_PAGE",
+            target: "background",
+            data: { includeLogs: true }, // Request console logs
+          }),
+          timeoutPromise,
+        ]);
+        console.log("✅ Page response received:", pageResponse);
+      } catch (pageError) {
+        console.warn("⚠️ Failed to get page response:", pageError);
+        pageResponse = { error: pageError.message };
+      }
+
+      return {
         timestamp: new Date().toLocaleString(),
         currentPage: currentPage,
         pageResponse: pageResponse,
         extensionId: chrome.runtime.id,
-        userAgent: navigator.userAgent,
+        userAgent: navigator.userAgent.substring(0, 100) + "...",
       };
-
-      // Add debug message to chat
-      const debugMessage = {
-        id: Date.now(),
-        type: "assistant",
-        content: `🔍 **DEBUG INFO**\n\n**Extension ID:** ${
-          debugInfo.extensionId
-        }\n\n**Current Page:** ${JSON.stringify(
-          debugInfo.currentPage,
-          null,
-          2
-        )}\n\n**Page Response:** ${JSON.stringify(
-          debugInfo.pageResponse,
-          null,
-          2
-        )}\n\n**Timestamp:** ${debugInfo.timestamp}`,
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, debugMessage]);
-      console.log("🔍 Debug Info:", debugInfo);
     } catch (error) {
-      console.error("❌ Debug command failed:", error);
+      console.error("❌ Failed to get debug info:", error);
+      return { error: error.message };
+    }
+  };
+
+  const handleDebugAnalysis = async () => {
+    console.log("🔍 Debug analysis started...");
+
+    try {
+      // Get debug info including console logs
+      const debugInfo = await getDebugInfo();
+
+      // Format console logs for GPT analysis
+      let logsForGPT = "No console logs available";
+      if (debugInfo.pageResponse?.data?.logs) {
+        const logs = debugInfo.pageResponse.data.logs;
+        console.log("Logs:", debugInfo);
+        if (logs.error) {
+          logsForGPT = `Console logs error: ${logs.error}`;
+        } else if (logs.logs && logs.logs.length > 0) {
+          logsForGPT = logs.logs
+            .map(
+              (log) =>
+                `[${log.timestamp || "unknown"}] ${log.type || "log"}: ${
+                  log.args || log.message || "empty"
+                }`
+            )
+            .join("\n");
+          if (logs.note) {
+            logsForGPT += `\n\nNote: ${logs.note}`;
+          }
+        } else {
+          logsForGPT = "No console messages found in current session";
+        }
+      }
+
+      // Format detailed page analysis
+      let pageAnalysisForGPT = "No detailed page analysis available";
+      console.log(
+        "🔍 Page Analysis Data:",
+        debugInfo.pageResponse?.data?.pageAnalysis
+      );
+      if (debugInfo.pageResponse?.data?.pageAnalysis) {
+        const analysis = debugInfo.pageResponse.data.pageAnalysis;
+
+        let analysisText = `**Page Info:**
+- Title: ${analysis.pageInfo?.title || "Unknown"}
+- URL: ${analysis.pageInfo?.url || "Unknown"}
+- Total Images: ${analysis.pageInfo?.totalImages || 0}
+- Total Scripts: ${analysis.pageInfo?.totalScripts || 0}
+- Total Links: ${analysis.pageInfo?.totalLinks || 0}
+
+`;
+
+        // Broken Images
+        if (analysis.brokenImages && analysis.brokenImages.length > 0) {
+          analysisText += `**Broken Images (${analysis.brokenImages.length}):**\n`;
+          analysis.brokenImages.forEach((img) => {
+            analysisText += `- Image #${img.index}: ${img.src}\n`;
+            analysisText += `  Alt text: "${img.alt}"\n`;
+            analysisText += `  Class: "${img.className}"\n`;
+            analysisText += `  ID: "${img.id}"\n`;
+            analysisText += `  Parent: ${img.parentElement}\n\n`;
+          });
+        } else {
+          analysisText += "**Broken Images:** None found\n\n";
+        }
+
+        // CSS Errors
+        if (analysis.cssErrors && analysis.cssErrors.length > 0) {
+          analysisText += `**CSS Errors (${analysis.cssErrors.length}):**\n`;
+          analysis.cssErrors.forEach((css) => {
+            analysisText += `- Stylesheet #${css.index}: ${css.href}\n`;
+            analysisText += `  Error: ${css.error}\n\n`;
+          });
+        }
+
+        // JavaScript Errors
+        if (analysis.jsErrors && analysis.jsErrors.length > 0) {
+          analysisText += `**JavaScript Errors (${analysis.jsErrors.length}):**\n`;
+          analysis.jsErrors.forEach((js) => {
+            analysisText += `- Error #${js.index}: ${js.message}\n`;
+            analysisText += `  Time: ${js.timestamp}\n`;
+            analysisText += `  Type: ${js.type}\n\n`;
+          });
+        }
+
+        // Network Issues
+        if (analysis.networkIssues && analysis.networkIssues.length > 0) {
+          analysisText += `**Network Issues (${analysis.networkIssues.length}):**\n`;
+          analysis.networkIssues.forEach((net) => {
+            analysisText += `- ${net.type} #${net.index}: ${net.src}\n`;
+            analysisText += `  Error: ${net.error}\n\n`;
+          });
+        }
+
+        // Performance Issues
+        if (
+          analysis.performanceIssues &&
+          analysis.performanceIssues.length > 0
+        ) {
+          analysisText += `**Performance Issues (${analysis.performanceIssues.length}):**\n`;
+          analysis.performanceIssues.forEach((perf) => {
+            analysisText += `- ${perf.description}\n`;
+            if (perf.resource) analysisText += `  Resource: ${perf.resource}\n`;
+            if (perf.duration)
+              analysisText += `  Duration: ${perf.duration}ms\n\n`;
+          });
+        }
+
+        // Accessibility Issues
+        if (
+          analysis.accessibilityIssues &&
+          analysis.accessibilityIssues.length > 0
+        ) {
+          analysisText += `**Accessibility Issues (${analysis.accessibilityIssues.length}):**\n`;
+          analysis.accessibilityIssues.forEach((acc) => {
+            analysisText += `- ${acc.description}\n`;
+            analysisText += `  Type: ${acc.type}\n\n`;
+          });
+        }
+
+        // Missing Resources
+        if (analysis.missingResources && analysis.missingResources.length > 0) {
+          analysisText += `**Missing Resources (${analysis.missingResources.length}):**\n`;
+          analysis.missingResources.forEach((res) => {
+            analysisText += `- ${res.description}\n`;
+            analysisText += `  Type: ${res.type}\n\n`;
+          });
+        }
+
+        pageAnalysisForGPT = analysisText;
+      }
+
+      // Create context for GPT analysis
+      const debugContext = {
+        url: debugInfo.currentPage?.url || "Unknown",
+        title: debugInfo.currentPage?.title || "Unknown",
+        extensionId: debugInfo.extensionId,
+        consoleLogs: logsForGPT,
+        pageAnalysis: pageAnalysisForGPT,
+        timestamp: debugInfo.timestamp,
+        pageContent: debugInfo.pageResponse?.data?.content || null,
+      };
+
+      // Send to GPT for analysis
+      const { GPTService } = await import("../services/gpt-service.js");
+      const gptService = new GPTService();
+      const apiKey = await chrome.runtime.sendMessage({
+        type: "GET_API_KEY",
+        target: "background",
+      });
+
+      if (apiKey && apiKey.success && apiKey.data) {
+        console.log("✅ API key found, setting up GPT service...");
+        await gptService.setApiKey(apiKey.data);
+
+        const analysisPrompt = `Phân tích debug info của Chrome extension này:
+
+**Trang web hiện tại:** ${debugContext.title} (${debugContext.url})
+**Extension ID:** ${debugContext.extensionId}
+**Thời gian:** ${debugContext.timestamp}
+
+**Console Logs:**
+${debugContext.consoleLogs}
+
+**Page Analysis:**
+${debugContext.pageAnalysis}
+
+Hãy phân tích CHI TIẾT:
+1. Có lỗi gì trong console logs không? (Liệt kê cụ thể từng lỗi)
+2. Trang web có hoạt động bình thường không?
+3. Có warning hoặc vấn đề gì cần chú ý? (Nêu rõ vấn đề cụ thể)
+4. Nếu có hình ảnh bị hỏng, hãy CHỈ RA CHÍNH XÁC hình ảnh nào (URL đầy đủ, alt text, class, ID)
+5. Nếu có lỗi JavaScript, hãy CHỈ RA file và dòng lỗi cụ thể
+6. Nếu có network errors, hãy CHỈ RA URL và status code cụ thể
+7. Đánh giá tổng quan về trạng thái trang web
+
+QUAN TRỌNG:
+- Hãy trả lời CHI TIẾT và CỤ THỂ, không chỉ nói chung chung
+- Khi user hỏi về hình ảnh bị hỏng, hãy đưa ra thông tin chi tiết từ Page Analysis
+- Nhớ thông tin này để trả lời các câu hỏi tiếp theo
+
+Trả lời bằng tiếng Việt, chi tiết và cụ thể.`;
+
+        console.log("🤖 Sending request to GPT...");
+        console.log("📝 Debug Context:", debugContext);
+        console.log("📝 Full Prompt:", analysisPrompt);
+        console.log(
+          "📝 Prompt Preview:",
+          analysisPrompt.substring(0, 500) + "..."
+        );
+
+        const response = await gptService.sendRequest({
+          message: analysisPrompt,
+          context: debugContext,
+        });
+
+        console.log("📨 GPT Response:", response);
+        console.log("📨 Response success:", response.success);
+        console.log("📨 Response error:", response.error);
+        console.log("📨 Response data:", response.data);
+
+        // Handle different response formats
+        let content = null;
+        if (response.success && response.data && response.data.content) {
+          // Format: {success: true, data: {content: "..."}}
+          content = response.data.content;
+        } else if (response.content) {
+          // Format: {content: "...", usage: {...}, model: "..."}
+          content = response.content;
+        }
+
+        if (content) {
+          const analysisMessage = {
+            id: Date.now(),
+            type: "assistant",
+            content: content,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, analysisMessage]);
+        } else {
+          console.error("❌ GPT service returned unexpected format:", {
+            success: response.success,
+            error: response.error,
+            data: response.data,
+            content: response.content,
+            fullResponse: response,
+          });
+          throw new Error(response.error || "GPT response format error");
+        }
+      } else {
+        console.error("❌ API key not found:", apiKey);
+        throw new Error("API key not configured");
+      }
+    } catch (error) {
+      console.error("❌ Debug analysis failed:", error);
+      console.error("❌ Error details:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
+
       const errorMessage = {
         id: Date.now(),
         type: "assistant",
-        content: `❌ **DEBUG ERROR**\n\n${error.message}`,
+        content: `❌ **Lỗi phân tích debug**\n\n**Chi tiết lỗi:** ${
+          error.message
+        }\n\n**Debug info:**\n- Extension ID: ${
+          chrome.runtime.id
+        }\n- Timestamp: ${new Date().toLocaleString()}\n\nVui lòng kiểm tra Console (F12) để xem chi tiết và thử lại.`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -194,9 +449,10 @@ const GPTChatApp: React.FC = () => {
 
       console.log(message);
 
-      // Check for debug command
+      // Check for debug command - send logs to GPT for analysis
       if (message === "debug") {
-        await handleDebugCommand();
+        await handleDebugAnalysis();
+        setIsLoading(false);
         return;
       }
 

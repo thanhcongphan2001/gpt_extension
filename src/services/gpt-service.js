@@ -89,6 +89,16 @@ export class GPTService {
     let systemContent =
       "You are a helpful AI assistant integrated into a Chrome browser extension. Always respond in Vietnamese (tiếng Việt) unless the user specifically requests another language. ";
 
+    // Check if this is a debug analysis request
+    if (context.consoleLogs || context.pageAnalysis) {
+      systemContent += `You are performing a debug analysis of a webpage. You have access to:
+- Console logs from the browser
+- Detailed page analysis including broken images, CSS errors, JavaScript errors, performance issues, etc.
+- Page information and statistics
+
+Your task is to analyze this technical information and provide detailed, specific insights about any issues found. Always be concrete and specific in your analysis, mentioning exact URLs, error messages, and technical details. `;
+    }
+
     if (context.url) {
       systemContent += `The user is currently on the webpage: ${context.url}. `;
     }

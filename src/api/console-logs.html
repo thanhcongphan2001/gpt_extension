@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Console Logs API</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .api-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .endpoint {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+        .logs-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .log-error { background: rgba(255, 99, 99, 0.2); border-left: 4px solid #ff6363; }
+        .log-warn { background: rgba(255, 193, 7, 0.2); border-left: 4px solid #ffc107; }
+        .log-info { background: rgba(54, 162, 235, 0.2); border-left: 4px solid #36a2eb; }
+        .log-log { background: rgba(75, 192, 192, 0.2); border-left: 4px solid #4bc0c0; }
+        .log-network { background: rgba(153, 102, 255, 0.2); border-left: 4px solid #9966ff; }
+        .refresh-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+        }
+        .setup-btn {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        .setup-btn:hover {
+            transform: translateY(-2px);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
+        .status.error { background: rgba(244, 67, 54, 0.2); color: #f44336; }
+        .tab-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Console Logs API</h1>
+        
+        <div class="api-info">
+            <h3>📡 API Endpoints</h3>
+            <div class="endpoint">
+                <strong>GET Console Logs:</strong><br>
+                chrome-extension://[EXTENSION_ID]/api/console-logs.html?action=get
+            </div>
+            <div class="endpoint">
+                <strong>Setup Console Logging:</strong><br>
+                chrome-extension://[EXTENSION_ID]/api/console-logs.html?action=setup
+            </div>
+        </div>
+
+        <div>
+            <button class="setup-btn" onclick="setupConsoleLogging()">🔧 Setup Console Logging</button>
+            <button class="refresh-btn" onclick="getConsoleLogs()">🔄 Get Console Logs</button>
+        </div>
+
+        <div id="status"></div>
+        <div id="tabInfo"></div>
+        <div id="logsContainer" class="logs-container"></div>
+    </div>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const action = urlParams.get('action');
+
+        // Auto-execute based on URL parameter
+        if (action === 'get') {
+            getConsoleLogs();
+        } else if (action === 'setup') {
+            setupConsoleLogging();
+        }
+
+        async function setupConsoleLogging() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '<div class="status">🔧 Setting up console logging...</div>';
+
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    type: "SETUP_CONSOLE_LOGGING",
+                    target: "background"
+                });
+
+                if (response && response.success) {
+                    statusDiv.innerHTML = '<div class="status success">✅ Console logging setup completed!</div>';
+                } else {
+                    statusDiv.innerHTML = `<div class="status error">❌ Setup failed: ${response?.error || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Setup error: ${error.message}</div>`;
+            }
+        }
+
+        async function getConsoleLogs() {
+            const statusDiv = document.getElementById('status');
+            const tabInfoDiv = document.getElementById('tabInfo');
+            const logsDiv = document.getElementById('logsContainer');
+            
+            statusDiv.innerHTML = '<div class="status">🔍 Getting console logs...</div>';
+            logsDiv.innerHTML = '';
+
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    type: "API_GET_CONSOLE_LOGS",
+                    target: "background"
+                });
+
+                if (response && response.success) {
+                    const data = response.data;
+                    
+                    // Show tab info
+                    tabInfoDiv.innerHTML = `
+                        <div class="tab-info">
+                            <strong>📄 Current Tab:</strong><br>
+                            <strong>Title:</strong> ${data.tabInfo.title}<br>
+                            <strong>URL:</strong> ${data.tabInfo.url}<br>
+                            <strong>Tab ID:</strong> ${data.tabInfo.id}<br>
+                            <strong>Active:</strong> ${data.tabInfo.active ? 'Yes' : 'No'}<br>
+                            <strong>Total Logs:</strong> ${data.totalLogs}<br>
+                            <strong>Timestamp:</strong> ${new Date(data.timestamp).toLocaleString()}
+                        </div>
+                    `;
+
+                    // Show status
+                    statusDiv.innerHTML = `<div class="status success">✅ Retrieved ${data.totalLogs} console logs</div>`;
+                    
+                    // Show logs
+                    if (data.logs && data.logs.length > 0) {
+                        data.logs.forEach(log => {
+                            const logDiv = document.createElement('div');
+                            logDiv.className = `log-entry log-${log.type}`;
+                            logDiv.innerHTML = `
+                                <strong>[${log.timestamp}]</strong> 
+                                <span style="text-transform: uppercase; font-weight: bold;">${log.type}:</span> 
+                                ${log.message}
+                            `;
+                            logsDiv.appendChild(logDiv);
+                        });
+                    } else {
+                        logsDiv.innerHTML = '<div class="log-entry">No console logs found. Try setting up console logging first.</div>';
+                    }
+
+                    // If URL parameter, return JSON for API usage
+                    if (action === 'get') {
+                        document.body.innerHTML = `<pre>${JSON.stringify(response, null, 2)}</pre>`;
+                    }
+                } else {
+                    statusDiv.innerHTML = `<div class="status error">❌ Failed to get logs: ${response?.error || 'Unknown error'}</div>`;
+                    
+                    if (action === 'get') {
+                        document.body.innerHTML = `<pre>${JSON.stringify(response, null, 2)}</pre>`;
+                    }
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+                
+                if (action === 'get') {
+                    document.body.innerHTML = `<pre>{"success": false, "error": "${error.message}"}</pre>`;
+                }
+            }
+        }
+
+        // Auto-refresh every 5 seconds if not in API mode
+        if (!action) {
+            setInterval(() => {
+                if (document.getElementById('logsContainer').innerHTML !== '') {
+                    getConsoleLogs();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
